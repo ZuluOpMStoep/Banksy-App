@@ -1,0 +1,73 @@
+import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ScreenContainer } from '@/components/screen-container';
+import { generateMockNews } from '@/lib/services/mock-data';
+import { NewsArticle } from '@/lib/types/trading';
+
+export default function NewsScreen() {
+  const [news, setNews] = useState<NewsArticle[]>([]);
+
+  useEffect(() => {
+    setNews(generateMockNews());
+  }, []);
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive':
+        return 'bg-success';
+      case 'negative':
+        return 'bg-error';
+      default:
+        return 'bg-warning';
+    }
+  };
+
+  return (
+    <ScreenContainer className="p-4">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View className="gap-4">
+          <View className="mb-2">
+            <Text className="text-3xl font-bold text-foreground">Market News</Text>
+            <Text className="text-sm text-muted mt-1">Latest trading news and updates</Text>
+          </View>
+
+          {news.map((article) => (
+            <TouchableOpacity key={article.id} activeOpacity={0.7}>
+              <View className="bg-surface rounded-xl p-4 border border-border">
+                <View className="flex-row justify-between items-start mb-2">
+                  <View className="flex-1 pr-2">
+                    <Text className="text-base font-semibold text-foreground">{article.title}</Text>
+                  </View>
+                  <View className={`${getSentimentColor(article.sentiment)} px-2 py-1 rounded`}>
+                    <Text className="text-xs font-bold text-background capitalize">{article.sentiment}</Text>
+                  </View>
+                </View>
+
+                <Text className="text-sm text-muted mb-3 leading-relaxed">{article.summary}</Text>
+
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-xs text-muted">{article.source}</Text>
+                  <Text className="text-xs text-muted">
+                    {new Date(article.timestamp).toLocaleTimeString()}
+                  </Text>
+                </View>
+
+                {article.relatedAssets.length > 0 && (
+                  <View className="flex-row flex-wrap gap-2 mt-3">
+                    {article.relatedAssets.map((asset) => (
+                      <View key={asset} className="bg-primary/10 px-2 py-1 rounded">
+                        <Text className="text-xs font-semibold text-primary">{asset}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          <View className="h-4" />
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}

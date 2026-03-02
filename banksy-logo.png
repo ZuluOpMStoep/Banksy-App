@@ -1,0 +1,214 @@
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, Pressable, FlatList } from 'react-native';
+import { ScreenContainer } from '@/components/screen-container';
+import { SignalNotificationCard } from '@/components/signal-notification-card';
+
+interface NotificationHistory {
+  id: string;
+  type: 'SIGNAL' | 'RISK_ALERT' | 'TAKE_PROFIT' | 'EVENT';
+  signalType?: 'STRONG_BUY' | 'BUY' | 'SELL' | 'STRONG_SELL';
+  assetName: string;
+  assetSymbol: string;
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfitLevels?: any;
+  confidence?: number;
+  timeframesAligned?: number;
+  positionSize?: 'LARGE' | 'MEDIUM' | 'SMALL' | 'MICRO';
+  riskRewardRatio?: number;
+  entryStrategy?: string;
+  timestamp: number;
+  read: boolean;
+}
+
+export default function NotificationsScreen() {
+  const [notifications, setNotifications] = useState<NotificationHistory[]>([
+    // Mock data for demonstration
+    {
+      id: '1',
+      type: 'SIGNAL',
+      signalType: 'STRONG_BUY',
+      assetName: 'Gold',
+      assetSymbol: 'XAU/USD',
+      entryPrice: 2050.0,
+      stopLoss: 2040.0,
+      takeProfitLevels: {
+        tp1: { price: 2060.0, riskReward: 1 },
+        tp2: { price: 2070.0, riskReward: 2 },
+        tp3: { price: 2080.0, riskReward: 3 },
+      },
+      confidence: 87,
+      timeframesAligned: 6,
+      positionSize: 'MEDIUM',
+      riskRewardRatio: 3.0,
+      entryStrategy: 'Breakout',
+      timestamp: Date.now() - 3600000,
+      read: false,
+    },
+    {
+      id: '2',
+      type: 'SIGNAL',
+      signalType: 'BUY',
+      assetName: 'EUR/USD',
+      assetSymbol: 'EURUSD',
+      entryPrice: 1.0850,
+      stopLoss: 1.0820,
+      takeProfitLevels: {
+        tp1: { price: 1.0880, riskReward: 1 },
+        tp2: { price: 1.0910, riskReward: 2 },
+        tp3: { price: 1.0940, riskReward: 3 },
+      },
+      confidence: 75,
+      timeframesAligned: 5,
+      positionSize: 'SMALL',
+      riskRewardRatio: 2.5,
+      entryStrategy: 'Pullback',
+      timestamp: Date.now() - 7200000,
+      read: true,
+    },
+  ]);
+
+  const [filter, setFilter] = useState<'ALL' | 'UNREAD' | 'SIGNALS' | 'ALERTS'>('ALL');
+
+  const filteredNotifications = notifications.filter((notif) => {
+    if (filter === 'UNREAD') return !notif.read;
+    if (filter === 'SIGNALS') return notif.type === 'SIGNAL';
+    if (filter === 'ALERTS') return notif.type !== 'SIGNAL';
+    return true;
+  });
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
+    );
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
+  };
+
+  const renderNotification = ({ item }: { item: NotificationHistory }) => {
+    if (item.type === 'SIGNAL' && item.signalType) {
+      return (
+        <View className="px-4 mb-2">
+          <Pressable onPress={() => markAsRead(item.id)}>
+            <SignalNotificationCard
+              signalType={item.signalType}
+              assetName={item.assetName}
+              assetSymbol={item.assetSymbol}
+              entryPrice={item.entryPrice || 0}
+              stopLoss={item.stopLoss || 0}
+              takeProfitLevels={item.takeProfitLevels}
+              confidence={item.confidence || 0}
+              timeframesAligned={item.timeframesAligned || 0}
+              positionSize={item.positionSize || 'SMALL'}
+              riskRewardRatio={item.riskRewardRatio || 1}
+              entryStrategy={item.entryStrategy || 'Unknown'}
+              onDismiss={() => deleteNotification(item.id)}
+            />
+          </Pressable>
+        </View>
+      );
+    }
+
+    // Other notification types
+    return (
+      <View className="px-4 mb-2 bg-surface rounded-lg p-3 border border-border">
+        <View className="flex-row justify-between items-start">
+          <View className="flex-1">
+            <Text className="font-semibold text-foreground">{item.assetName}</Text>
+            <Text className="text-sm text-muted">{item.type}</Text>
+            <Text className="text-xs text-muted mt-1">
+              {new Date(item.timestamp).toLocaleString()}
+            </Text>
+          </View>
+          <Pressable onPress={() => deleteNotification(item.id)}>
+            <Text className="text-error font-semibold">✕</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <ScreenContainer className="bg-background">
+      {/* Header */}
+      <View className="px-4 py-4 border-b border-border">
+        <View className="flex-row justify-between items-center mb-3">
+          <Text className="text-2xl font-bold text-foreground">Notifications</Text>
+          {unreadCount > 0 && (
+            <View className="bg-error rounded-full px-2 py-1">
+              <Text className="text-xs font-bold text-background">{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Filter Buttons */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2">
+          {(['ALL', 'UNREAD', 'SIGNALS', 'ALERTS'] as const).map((f) => (
+            <Pressable
+              key={f}
+              onPress={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full ${
+                filter === f
+                  ? 'bg-primary'
+                  : 'bg-surface border border-border'
+              }`}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  filter === f ? 'text-background' : 'text-foreground'
+                }`}
+              >
+                {f}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Notifications List */}
+      {filteredNotifications.length > 0 ? (
+        <FlatList
+          data={filteredNotifications}
+          renderItem={renderNotification}
+          keyExtractor={(item) => item.id}
+          scrollEnabled={false}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 20 }}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center py-20">
+          <Text className="text-lg text-muted">No notifications yet</Text>
+          <Text className="text-sm text-muted mt-2">
+            Signals will appear here when 4+ timeframes align
+          </Text>
+        </View>
+      )}
+
+      {/* Statistics */}
+      {notifications.length > 0 && (
+        <View className="px-4 py-4 border-t border-border">
+          <Text className="text-sm font-semibold text-foreground mb-2">Statistics</Text>
+          <View className="grid grid-cols-3 gap-2">
+            <View className="bg-surface rounded p-3">
+              <Text className="text-xs text-muted">Total</Text>
+              <Text className="text-lg font-bold text-foreground">{notifications.length}</Text>
+            </View>
+            <View className="bg-surface rounded p-3">
+              <Text className="text-xs text-muted">Unread</Text>
+              <Text className="text-lg font-bold text-primary">{unreadCount}</Text>
+            </View>
+            <View className="bg-surface rounded p-3">
+              <Text className="text-xs text-muted">Signals</Text>
+              <Text className="text-lg font-bold text-success">
+                {notifications.filter((n) => n.type === 'SIGNAL').length}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+    </ScreenContainer>
+  );
+}

@@ -1,0 +1,87 @@
+import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ScreenContainer } from '@/components/screen-container';
+import { generateMockEconomicEvents } from '@/lib/services/mock-data';
+import { EconomicEvent } from '@/lib/types/trading';
+
+export default function EventsScreen() {
+  const [events, setEvents] = useState<EconomicEvent[]>([]);
+
+  useEffect(() => {
+    setEvents(generateMockEconomicEvents());
+  }, []);
+
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case 'high':
+        return 'bg-error';
+      case 'medium':
+        return 'bg-warning';
+      default:
+        return 'bg-muted';
+    }
+  };
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
+
+  return (
+    <ScreenContainer className="p-4">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View className="gap-4">
+          <View className="mb-2">
+            <Text className="text-3xl font-bold text-foreground">Economic Calendar</Text>
+            <Text className="text-sm text-muted mt-1">Upcoming market-moving events</Text>
+          </View>
+
+          {events.map((event) => (
+            <TouchableOpacity key={event.id} activeOpacity={0.7}>
+              <View className="bg-surface rounded-xl p-4 border border-border">
+                <View className="flex-row justify-between items-start mb-3">
+                  <View className="flex-1 pr-2">
+                    <Text className="text-base font-semibold text-foreground">{event.name}</Text>
+                    <Text className="text-xs text-muted mt-1">{event.country}</Text>
+                  </View>
+                  <View className={`${getImpactColor(event.impact)} px-3 py-1 rounded-full`}>
+                    <Text className="text-xs font-bold text-background capitalize">{event.impact}</Text>
+                  </View>
+                </View>
+
+                <Text className="text-sm text-muted mb-3">{formatTime(event.timestamp)}</Text>
+
+                <View className="bg-background rounded-lg p-3 mb-3">
+                  <View className="flex-row justify-between mb-2">
+                    <Text className="text-xs text-muted">Previous</Text>
+                    <Text className="text-sm font-semibold text-foreground">
+                      {event.previous !== undefined ? event.previous : 'N/A'} {event.unit || ''}
+                    </Text>
+                  </View>
+                  <View className="flex-row justify-between">
+                    <Text className="text-xs text-muted">Forecast</Text>
+                    <Text className="text-sm font-semibold text-foreground">
+                      {event.forecast !== undefined ? event.forecast : 'N/A'} {event.unit || ''}
+                    </Text>
+                  </View>
+                </View>
+
+                {event.relatedAssets.length > 0 && (
+                  <View className="flex-row flex-wrap gap-2">
+                    {event.relatedAssets.map((asset) => (
+                      <View key={asset} className="bg-primary/10 px-2 py-1 rounded">
+                        <Text className="text-xs font-semibold text-primary">{asset}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          <View className="h-4" />
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}

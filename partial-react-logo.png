@@ -1,0 +1,154 @@
+import { ScrollView, Text, View, TouchableOpacity, FlatList } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ScreenContainer } from '@/components/screen-container';
+import { TRADING_ASSETS, DEFAULT_WATCHLIST } from '@/lib/constants/assets';
+import { generateMockPrice, generateMockMPSSignal } from '@/lib/services/mock-data';
+import { AssetPrice, MPSSignalData } from '@/lib/types/trading';
+
+export default function WatchlistScreen() {
+  const [watchlist, setWatchlist] = useState<string[]>(DEFAULT_WATCHLIST);
+  const [prices, setPrices] = useState<Record<string, AssetPrice>>({});
+  const [signals, setSignals] = useState<Record<string, MPSSignalData>>({});
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadData = () => {
+    const priceMap: Record<string, AssetPrice> = {};
+    const signalMap: Record<string, MPSSignalData> = {};
+
+    watchlist.forEach((assetId) => {
+      const asset = TRADING_ASSETS.find((a) => a.id === assetId);
+      if (asset) {
+        const basePrices: Record<string, number> = {
+          gold: 2050,
+          silver: 24.5,
+          bitcoin: 45000,
+          eur_usd: 1.095,
+          gbp_usd: 1.27,
+          usd_jpy: 148.5,
+          aud_usd: 0.67,
+          dax: 18500,
+        };
+        priceMap[assetId] = generateMockPrice(assetId, basePrices[assetId] || 100);
+        signalMap[assetId] = generateMockMPSSignal(assetId);
+      }
+    });
+
+    setPrices(priceMap);
+    setSignals(signalMap);
+  };
+
+  const removeFromWatchlist = (assetId: string) => {
+    setWatchlist(watchlist.filter((id) => id !== assetId));
+  };
+
+  const getSignalColor = (signal: string) => {
+    switch (signal) {
+      case 'STRONG_BUY':
+      case 'BUY':
+        return 'bg-success';
+      case 'STRONG_SELL':
+      case 'SELL':
+        return 'bg-error';
+      default:
+        return 'bg-warning';
+    }
+  };
+
+  const getPriceChangeColor = (change: number) => {
+    return change >= 0 ? 'text-success' : 'text-error';
+  };
+
+  const availableAssets = TRADING_ASSETS.filter((a) => !watchlist.includes(a.id));
+
+  return (
+    <ScreenContainer className="p-4">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View className="gap-4">
+          <View className="mb-2">
+            <Text className="text-3xl font-bold text-foreground">Watchlist</Text>
+            <Text className="text-sm text-muted mt-1">{watchlist.length} assets tracked</Text>
+          </View>
+
+          {watchlist.length === 0 ? (
+            <View className="bg-surface rounded-xl p-6 items-center justify-center">
+              <Text className="text-lg font-semibold text-foreground mb-2">No assets in watchlist</Text>
+              <Text className="text-sm text-muted text-center">Add assets to track them here</Text>
+            </View>
+          ) : (
+            watchlist.map((assetId) => {
+              const asset = TRADING_ASSETS.find((a) => a.id === assetId);
+              const price = prices[assetId];
+              const signal = signals[assetId];
+
+              if (!asset || !price || !signal) return null;
+
+              return (
+                <View key={assetId} className="bg-surface rounded-xl p-4 border border-border">
+                  <View className="flex-row justify-between items-start mb-3">
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-foreground">{asset.displayName}</Text>
+                      <Text className="text-xs text-muted mt-1">{asset.description}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => removeFromWatchlist(assetId)}
+                      className="bg-error/10 px-3 py-1 rounded"
+                    >
+                      <Text className="text-xs font-bold text-error">Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View className="flex-row justify-between items-center">
+                    <View>
+                      <Text className="text-2xl font-bold text-foreground">
+                        {price.price.toFixed(price.price > 100 ? 2 : 4)}
+                      </Text>
+                      <View className="flex-row items-center mt-1">
+                        <Text className={`text-sm font-semibold ${getPriceChangeColor(price.change24h)}`}>
+                          {price.changePercent24h > 0 ? '+' : ''}
+                          {price.changePercent24h.toFixed(2)}%
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className={`${getSignalColor(signal.signal)} px-3 py-2 rounded-lg`}>
+                      <Text className="text-xs font-bold text-background">{signal.signal}</Text>
+                      <Text className="text-xs font-bold text-background mt-1">{signal.confidence}%</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
+
+          {availableAssets.length > 0 && (
+            <View className="mt-4">
+              <Text className="text-lg font-semibold text-foreground mb-3">Add Assets</Text>
+              {availableAssets.map((asset) => (
+                <TouchableOpacity
+                  key={asset.id}
+                  onPress={() => setWatchlist([...watchlist, asset.id])}
+                  className="bg-primary/10 rounded-lg p-3 mb-2"
+                >
+                  <View className="flex-row justify-between items-center">
+                    <View>
+                      <Text className="text-sm font-semibold text-foreground">{asset.displayName}</Text>
+                      <Text className="text-xs text-muted mt-1">{asset.type}</Text>
+                    </View>
+                    <Text className="text-lg font-bold text-primary">+</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <View className="h-4" />
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}

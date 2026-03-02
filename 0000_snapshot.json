@@ -1,0 +1,297 @@
+/**
+ * Backtesting Type Definitions
+ * 
+ * Structures for historical signal replay, performance metrics, and analysis
+ */
+
+// ============================================================================
+// BACKTEST TRADE EXECUTION
+// ============================================================================
+
+export interface BacktestTrade {
+  id: string;
+  assetSymbol: string;
+  entryTime: number;
+  entryPrice: number;
+  exitTime: number;
+  exitPrice: number;
+  signalType: 'BUY' | 'SELL';
+  positionSize: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE';
+  
+  // Risk management
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  takeProfit3: number;
+  
+  // Outcome
+  exitReason: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'TIMEOUT' | 'MANUAL';
+  profitLoss: number; // In points
+  profitLossPercent: number; // In percentage
+  profitLossPips: number; // For forex
+  
+  // Signal details
+  confidence: number; // 0-100
+  timeframeAlignment: number; // 0-7
+  entryStrategy: string;
+  
+  // Metadata
+  duration: number; // milliseconds
+  maxProfit: number; // Highest profit during trade
+  maxLoss: number; // Highest loss during trade
+  riskRewardRatio: number;
+}
+
+export interface BacktestSession {
+  id: string;
+  assetSymbol: string;
+  startTime: number;
+  endTime: number;
+  trades: BacktestTrade[];
+  
+  // Configuration
+  initialBalance: number;
+  riskPerTrade: number; // Percentage
+  maxDrawdown: number; // Percentage
+  
+  // Results
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  breakEvenTrades: number;
+}
+
+// ============================================================================
+// PERFORMANCE METRICS
+// ============================================================================
+
+export interface TradeMetrics {
+  // Win/Loss Statistics
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  breakEvenTrades: number;
+  winRate: number; // Percentage (0-100)
+  lossRate: number; // Percentage (0-100)
+  
+  // Profitability
+  totalProfit: number;
+  totalLoss: number;
+  netProfit: number;
+  profitFactor: number; // Total profit / Total loss
+  averageWin: number;
+  averageLoss: number;
+  winLossRatio: number; // Average win / Average loss
+  
+  // Risk Metrics
+  largestWin: number;
+  largestLoss: number;
+  consecutiveWins: number;
+  consecutiveLosses: number;
+  maxDrawdown: number; // Percentage
+  drawdownDuration: number; // milliseconds
+  
+  // Return Metrics
+  totalReturn: number; // Percentage
+  annualizedReturn: number; // Percentage
+  monthlyReturn: number; // Percentage
+  
+  // Risk-Adjusted Returns
+  sharpeRatio: number; // Risk-adjusted return (higher is better)
+  sortinoRatio: number; // Downside risk-adjusted return
+  calmarRatio: number; // Return / Max Drawdown
+  
+  // Consistency
+  standardDeviation: number;
+  varianceOfReturns: number;
+  
+  // Expectancy
+  expectancyPerTrade: number; // Average profit/loss per trade
+  profitPerWinningTrade: number;
+  lossPerLosingTrade: number;
+}
+
+export interface PerformanceByTimeframe {
+  timeframe: '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
+  metrics: TradeMetrics;
+  sampleSize: number;
+}
+
+export interface PerformanceByAsset {
+  assetSymbol: string;
+  assetName: string;
+  metrics: TradeMetrics;
+  sampleSize: number;
+  timeframeBreakdown: PerformanceByTimeframe[];
+}
+
+export interface PerformanceByStrategy {
+  strategy: 'Breakout' | 'Pullback' | 'Reversal' | 'Continuation';
+  metrics: TradeMetrics;
+  sampleSize: number;
+}
+
+export interface PerformanceByConfidence {
+  confidenceRange: string; // "90-100%", "80-90%", etc.
+  minConfidence: number;
+  maxConfidence: number;
+  metrics: TradeMetrics;
+  sampleSize: number;
+}
+
+// ============================================================================
+// BACKTEST REPORT
+// ============================================================================
+
+export interface BacktestReport {
+  id: string;
+  createdAt: number;
+  
+  // Test Configuration
+  testName: string;
+  description?: string;
+  startDate: number;
+  endDate: number;
+  durationDays: number;
+  
+  // Assets Tested
+  assets: string[]; // Asset symbols
+  timeframes: ('1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w')[];
+  
+  // Overall Metrics
+  overallMetrics: TradeMetrics;
+  
+  // Breakdown Analysis
+  performanceByAsset: PerformanceByAsset[];
+  performanceByStrategy: PerformanceByStrategy[];
+  performanceByConfidence: PerformanceByConfidence[];
+  
+  // Equity Curve
+  equityCurve: EquityPoint[];
+  drawdownCurve: DrawdownPoint[];
+  
+  // Monthly Performance
+  monthlyPerformance: MonthlyPerformance[];
+  
+  // Trade Distribution
+  tradeDistribution: TradeDistribution;
+  
+  // Metadata
+  totalTrades: number;
+  backtestDurationMs: number;
+}
+
+export interface EquityPoint {
+  timestamp: number;
+  balance: number;
+  cumulative: number;
+}
+
+export interface DrawdownPoint {
+  timestamp: number;
+  drawdown: number; // Percentage
+  peak: number;
+  trough: number;
+}
+
+export interface MonthlyPerformance {
+  month: string; // "2025-01"
+  trades: number;
+  wins: number;
+  losses: number;
+  profit: number;
+  returnPercent: number;
+}
+
+export interface TradeDistribution {
+  byHourOfDay: { [hour: number]: number }; // Trade count by hour
+  byDayOfWeek: { [day: number]: number }; // Trade count by day (0=Sunday)
+  byDuration: {
+    lessThan1Hour: number;
+    oneToFourHours: number;
+    fourToTwentyFourHours: number;
+    moreThanOneDay: number;
+  };
+  byProfitRange: {
+    hugeLoss: number; // < -5%
+    largeLoss: number; // -5% to -2%
+    smallLoss: number; // -2% to 0%
+    breakEven: number; // 0%
+    smallWin: number; // 0% to 2%
+    largeWin: number; // 2% to 5%
+    hugeWin: number; // > 5%
+  };
+}
+
+// ============================================================================
+// BACKTEST CONFIGURATION
+// ============================================================================
+
+export interface BacktestConfig {
+  // Time Range
+  startDate: number;
+  endDate: number;
+  
+  // Assets and Timeframes
+  assets: string[]; // Asset symbols to test
+  timeframes: ('1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w')[];
+  
+  // Trading Rules
+  initialBalance: number;
+  riskPerTrade: number; // Percentage (e.g., 2%)
+  maxDrawdown: number; // Percentage (e.g., 20%)
+  
+  // Signal Filters
+  minConfidence: number; // 0-100
+  minTimeframeAlignment: number; // 0-7
+  entryStrategies: ('Breakout' | 'Pullback' | 'Reversal' | 'Continuation')[];
+  
+  // Slippage and Fees
+  slippagePoints: number; // Points to add to entry/exit
+  commissionPercent: number; // Commission percentage
+  
+  // Exit Rules
+  maxHoldingTime: number; // milliseconds
+  useStopLoss: boolean;
+  useTakeProfit: boolean;
+  partialTakeProfits: boolean; // Scale out of positions
+}
+
+// ============================================================================
+// BACKTEST PROGRESS
+// ============================================================================
+
+export interface BacktestProgress {
+  status: 'idle' | 'running' | 'completed' | 'failed';
+  progress: number; // 0-100
+  currentAsset: string;
+  currentTimeframe: string;
+  tradesProcessed: number;
+  totalTrades: number;
+  elapsedTime: number; // milliseconds
+  estimatedTimeRemaining: number; // milliseconds
+  error?: string;
+}
+
+// ============================================================================
+// BACKTEST COMPARISON
+// ============================================================================
+
+export interface BacktestComparison {
+  report1: BacktestReport;
+  report2: BacktestReport;
+  
+  // Metrics Comparison
+  metricsComparison: {
+    metric: string;
+    value1: number;
+    value2: number;
+    difference: number;
+    percentChange: number;
+    winner: 'report1' | 'report2' | 'tie';
+  }[];
+  
+  // Overall Winner
+  overallWinner: 'report1' | 'report2' | 'tie';
+  winnerReason: string;
+}

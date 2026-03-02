@@ -1,0 +1,205 @@
+/**
+ * Paywall Screen
+ * Displays subscription tiers and pricing in USD
+ * Handles purchase flow
+ */
+
+import { ScrollView, Text, View, Pressable, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ScreenContainer } from '@/components/screen-container';
+import {
+  SUBSCRIPTION_PLANS,
+  SubscriptionPlan,
+  getPlansByBillingCycle,
+  formatPrice,
+  getYearlySavings,
+} from '@/lib/services/subscription-service';
+import { revenueCatService } from '@/lib/services/revenucat-service';
+import { useColors } from '@/hooks/use-colors';
+
+export default function PaywallScreen() {
+  const colors = useColors();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+
+  useEffect(() => {
+    const filteredPlans = getPlansByBillingCycle(billingCycle).filter(
+      (p) => p.tier !== 'free'
+    );
+    setPlans(filteredPlans);
+  }, [billingCycle]);
+
+  const handlePurchase = async (planId: string) => {
+    setLoading(true);
+    try {
+      const result = await revenueCatService.purchaseProduct(planId);
+      if (result) {
+        alert('Subscription activated!');
+      } else {
+        alert('Purchase failed. Please try again.');
+      }
+    } catch (error) {
+      alert('Error during purchase. Please try again.');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPlanColor = (tier: string) => {
+    switch (tier) {
+      case 'pro':
+        return '#3B82F6'; // Blue
+      case 'elite':
+        return '#8B5CF6'; // Purple
+      case 'premium':
+        return '#F59E0B'; // Amber
+      default:
+        return colors.primary;
+    }
+  };
+
+  return (
+    <ScreenContainer className="bg-background">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View className="p-6 gap-6">
+          {/* Header */}
+          <View className="gap-2">
+            <Text className="text-4xl font-bold text-foreground">
+              Unlock Banksy
+            </Text>
+            <Text className="text-base text-muted">
+              Choose your trading analysis plan
+            </Text>
+          </View>
+
+          {/* Billing Cycle Toggle */}
+          <View className="flex-row gap-3 bg-surface rounded-lg p-1">
+            <Pressable
+              onPress={() => setBillingCycle('monthly')}
+              className={`flex-1 py-3 rounded-lg items-center ${
+                billingCycle === 'monthly' ? 'bg-primary' : 'bg-transparent'
+              }`}
+            >
+              <Text
+                className={`font-semibold ${
+                  billingCycle === 'monthly' ? 'text-white' : 'text-foreground'
+                }`}
+              >
+                Monthly
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setBillingCycle('yearly')}
+              className={`flex-1 py-3 rounded-lg items-center relative ${
+                billingCycle === 'yearly' ? 'bg-primary' : 'bg-transparent'
+              }`}
+            >
+              <Text
+                className={`font-semibold ${
+                  billingCycle === 'yearly' ? 'text-white' : 'text-foreground'
+                }`}
+              >
+                Yearly
+              </Text>
+              {billingCycle === 'yearly' && (
+                <Text className="text-xs text-white font-bold absolute -top-2 -right-2 bg-success px-2 py-1 rounded">
+                  Save 20%
+                </Text>
+              )}
+            </Pressable>
+          </View>
+
+          {/* Plans */}
+          <View className="gap-4">
+            {plans.map((plan) => (
+              <Pressable
+                key={plan.id}
+                onPress={() => setSelectedPlan(plan.id)}
+                className={`rounded-2xl p-6 border-2 ${
+                  selectedPlan === plan.id
+                    ? 'border-primary bg-surface'
+                    : 'border-border bg-surface'
+                }`}
+              >
+                {/* Plan Header */}
+                <View className="flex-row justify-between items-start mb-4">
+                  <View>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {plan.name.split('(')[0].trim()}
+                    </Text>
+                    <Text className="text-sm text-muted mt-1">
+                      {plan.description}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Price */}
+                <View className="mb-4">
+                  <Text className="text-4xl font-bold text-foreground">
+                    {formatPrice(plan.price)}
+                  </Text>
+                  <Text className="text-sm text-muted mt-1">
+                    {plan.billingCycle === 'monthly'
+                      ? 'per month'
+                      : 'per year'}
+                  </Text>
+                </View>
+
+                {/* Features */}
+                <View className="gap-2 mb-6">
+                  {plan.features.slice(0, 5).map((feature, index) => (
+                    <View key={index} className="flex-row gap-2">
+                      <Text className="text-success font-bold">✓</Text>
+                      <Text className="text-sm text-foreground flex-1">
+                        {feature}
+                      </Text>
+                    </View>
+                  ))}
+                  {plan.features.length > 5 && (
+                    <Text className="text-xs text-muted mt-2">
+                      +{plan.features.length - 5} more features
+                    </Text>
+                  )}
+                </View>
+
+                {/* Purchase Button */}
+                <Pressable
+                  onPress={() => handlePurchase(plan.id)}
+                  disabled={loading}
+                  className="bg-primary py-3 rounded-lg items-center"
+                >
+                  {loading && selectedPlan === plan.id ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text className="text-white font-bold">
+                      Start {billingCycle === 'yearly' ? 'Annual' : ''} Plan
+                    </Text>
+                  )}
+                </Pressable>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Free Trial Info */}
+          <View className="bg-surface rounded-lg p-4 border border-border">
+            <Text className="text-sm text-foreground font-semibold mb-2">
+              7-Day Free Trial
+            </Text>
+            <Text className="text-xs text-muted">
+              Start your free trial today. Cancel anytime before the trial ends
+              with no charges.
+            </Text>
+          </View>
+
+          {/* Footer */}
+          <Text className="text-xs text-muted text-center">
+            Prices in USD. Billing occurs at the start of each period.
+          </Text>
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}

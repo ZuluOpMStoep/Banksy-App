@@ -1,62 +1,111 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+/**
+ * Trade Journal Types
+ * Data model for tracking user trades and comparing actual vs predicted accuracy
+ */
 
-# dependencies
-node_modules/
+export type TradeStatus = 'open' | 'closed' | 'cancelled';
+export type TradeOutcome = 'win' | 'loss' | 'breakeven' | 'pending';
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+export interface TradeEntry {
+  id: string;
+  userId: string;
+  asset: string; // e.g., "GOLD", "SILVER"
+  signalType: 'BUY' | 'SELL'; // The signal that triggered the trade
+  entryPrice: number;
+  entryTime: number; // Timestamp
+  entryTimeframe: string; // e.g., "1H", "4H", "1D"
+  
+  // Predicted levels from signal
+  predictedTP1: number;
+  predictedTP2: number;
+  predictedTP3: number;
+  predictedSL: number;
+  predictedConfidence: number; // 0-100%
+  predictedAccuracy: number; // Historical backtest accuracy %
+  
+  // Actual trade execution
+  exitPrice?: number;
+  exitTime?: number;
+  exitType?: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'manual' | 'cancelled';
+  
+  // Risk/Reward
+  riskAmount: number; // Entry - SL
+  rewardAmount1: number; // TP1 - Entry
+  rewardAmount2: number; // TP2 - Entry
+  rewardAmount3: number; // TP3 - Entry
+  
+  // Outcome tracking
+  status: TradeStatus;
+  outcome: TradeOutcome;
+  actualPnL?: number; // Profit/Loss in currency
+  actualPnLPercent?: number; // Profit/Loss %
+  actualRiskRewardRatio?: number; // Actual RR achieved
+  
+  // User notes
+  notes?: string;
+  
+  // Timestamps
+  createdAt: number;
+  updatedAt: number;
+}
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+export interface TradeStats {
+  totalTrades: number;
+  winTrades: number;
+  lossTrades: number;
+  breakevenTrades: number;
+  
+  winRate: number; // % of winning trades
+  lossRate: number; // % of losing trades
+  
+  totalPnL: number; // Sum of all PnL
+  totalPnLPercent: number; // Average PnL %
+  
+  averageWin: number; // Average winning trade PnL
+  averageLoss: number; // Average losing trade PnL
+  profitFactor: number; // Sum of wins / Sum of losses
+  
+  largestWin: number;
+  largestLoss: number;
+  
+  // Accuracy comparison
+  predictedAccuracy: number; // Average predicted accuracy from signals
+  actualAccuracy: number; // Actual win rate achieved
+  accuracyDifference: number; // Predicted - Actual
+  
+  // Risk metrics
+  totalRisk: number; // Sum of all risk amounts
+  totalReward: number; // Sum of all reward amounts
+  averageRiskRewardRatio: number;
+  
+  // By asset
+  statsByAsset: Record<string, TradeStats>;
+  
+  // By signal type
+  statsBySignal: {
+    BUY: TradeStats;
+    SELL: TradeStats;
+  };
+  
+  // By timeframe
+  statsByTimeframe: Record<string, TradeStats>;
+}
 
-# Metro
-.metro-health-check*
+export interface TradeFilter {
+  asset?: string;
+  signalType?: 'BUY' | 'SELL';
+  status?: TradeStatus;
+  outcome?: TradeOutcome;
+  timeframe?: string;
+  startDate?: number;
+  endDate?: number;
+}
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-app-example
-
-# generated native folders
-/ios
-/android
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Logs
-logs
-*.log
-
-# OS
-Thumbs.db
-
-# Build files
-*.tgz
-*.tar.gz
-.cache/
+export interface TradeJournalState {
+  trades: TradeEntry[];
+  stats: TradeStats;
+  selectedTrade?: TradeEntry;
+  filters: TradeFilter;
+  isLoading: boolean;
+  error?: string;
+}

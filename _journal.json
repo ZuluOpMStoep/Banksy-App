@@ -1,0 +1,122 @@
+/**
+ * Signal History Type Definitions
+ */
+
+import { MPSSignalType, TimeFrame } from './trading';
+
+export type SignalOutcome = 'WIN' | 'LOSS' | 'BREAKEVEN' | 'PENDING';
+
+export interface SignalHistoryEntry {
+  id: string; // Unique identifier
+  assetId: string; // Asset (bitcoin, gold, eur_usd, etc.)
+  signal: MPSSignalType; // STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL
+  timeFrame: TimeFrame; // 1m, 5m, 15m, 1h, 4h, 1d, 1w
+  
+  // Entry Information
+  entryPrice: number; // Price when signal was generated
+  entryTime: number; // Timestamp when signal was generated
+  entryConfidence: number; // 0-100 confidence at entry
+  
+  // Target & Stop Information
+  stopLoss: number; // Stop loss level
+  takeProfit1: number; // First take profit (1:1 risk-reward)
+  takeProfit2: number; // Second take profit (2:1 risk-reward)
+  takeProfit3: number; // Third take profit (3:1 risk-reward)
+  
+  // Exit Information
+  exitPrice?: number; // Price when trade was closed (optional if pending)
+  exitTime?: number; // Timestamp when trade was closed (optional if pending)
+  exitReason?: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'MANUAL' | 'EXPIRED'; // How trade ended
+  
+  // Performance Metrics
+  outcome: SignalOutcome; // WIN, LOSS, BREAKEVEN, PENDING
+  profitLoss?: number; // Profit/loss in currency
+  profitLossPercent?: number; // Profit/loss percentage
+  riskRewardRatio?: number; // Actual risk/reward achieved
+  
+  // Accuracy Tracking
+  predictedAccuracy: number; // Backtest accuracy at time of signal
+  actualAccuracy?: number; // Real accuracy after signal resolves
+  
+  // Components at time of signal
+  components: {
+    trend: number;
+    momentum: number;
+    structure: number;
+    risk: number;
+  };
+  
+  // Metadata
+  notes?: string; // User notes about the trade
+  tags?: string[]; // User tags for filtering
+  createdAt: number; // When entry was created
+  updatedAt: number; // When entry was last updated
+}
+
+export interface SignalHistoryStats {
+  totalSignals: number;
+  winCount: number;
+  lossCount: number;
+  breakevenCount: number;
+  pendingCount: number;
+  
+  winRate: number; // % of winning trades
+  lossRate: number; // % of losing trades
+  
+  totalProfit: number; // Sum of all profits
+  totalLoss: number; // Sum of all losses
+  netProfit: number; // Total profit - total loss
+  
+  averageWin: number; // Average profit per winning trade
+  averageLoss: number; // Average loss per losing trade
+  profitFactor: number; // Total profit / total loss
+  
+  bestTrade: number; // Largest profit
+  worstTrade: number; // Largest loss
+  
+  averageRiskReward: number; // Average risk/reward ratio achieved
+  
+  // By signal type
+  bySignalType: {
+    [key in MPSSignalType]?: {
+      count: number;
+      winRate: number;
+      profitFactor: number;
+    };
+  };
+  
+  // By asset
+  byAsset: {
+    [assetId: string]: {
+      count: number;
+      winRate: number;
+      profitFactor: number;
+    };
+  };
+  
+  // By timeframe
+  byTimeFrame: {
+    [tf in TimeFrame]?: {
+      count: number;
+      winRate: number;
+      profitFactor: number;
+    };
+  };
+}
+
+export interface SignalHistoryFilter {
+  assetId?: string;
+  signal?: MPSSignalType;
+  timeFrame?: TimeFrame;
+  outcome?: SignalOutcome;
+  dateFrom?: number;
+  dateTo?: number;
+  minConfidence?: number;
+  maxConfidence?: number;
+  tags?: string[];
+}
+
+export interface SignalHistorySortOptions {
+  sortBy: 'entryTime' | 'profitLoss' | 'confidence' | 'accuracy';
+  order: 'asc' | 'desc';
+}
